@@ -19,7 +19,7 @@ public class _xlsx_test {
         // 将输入流转换为工作簿对象
         XSSFWorkbook workbook = new XSSFWorkbook(_xlsx_test.class.
                 getClassLoader().
-                getResourceAsStream(new String("test.xlsx".getBytes(StandardCharsets.UTF_8))));
+                getResourceAsStream(new String("100Y0065.csv".getBytes(StandardCharsets.UTF_8))));
         // 获取第一个工作表
         int activeSheetIndex = workbook.getActiveSheetIndex();
         XSSFSheet sheet = workbook.getSheetAt(activeSheetIndex);
