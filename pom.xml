@@ -4,14 +4,22 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.csyl</groupId>
     <artifactId>poi-examp</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1-bata</version>
     <name>poi-examp</name>
 
     <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
         <poi.version>4.1.2</poi.version>
+        <lombok.version>1.18.20</lombok.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
