@@ -111,9 +111,9 @@ public class _csv_test {
 
         //writer
         List<CsvDataDTO> list = new ArrayList<>();
-        for (CsvDataSort csvDataSort : resultList) {
-            list.addAll(csvDataSort.getCsvDataDTOS());
-        }
+        resultList.stream()
+//                .sorted(Comparator.comparing(CsvDataSort::getLastShootingLocalDateTime))
+                .forEach(csvDataSort -> list.addAll(csvDataSort.getCsvDataDTOS()));
         writer(CsvDataDTO.class, list);
     }
 
