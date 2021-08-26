@@ -1,11 +1,11 @@
 package com.csyl.poi.excel;
 
 import com.csvreader.CsvReader;
+import com.csvreader.CsvWriter;
 import com.csyl.poi.dto.CsvDataDTO;
 import com.csyl.poi.dto.DataMatch;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.junit.Test;
 
@@ -20,10 +20,14 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class _csv_test {
+
+    private final static String GBK = "GBK";
 
     @Test
     public void read() throws IOException {
@@ -31,7 +35,7 @@ public class _csv_test {
         // 第一参数：读取文件的路径 第二个参数：分隔符（不懂仔细查看引用百度百科的那段话） 第三个参数：字符集
         CsvReader csvReader = new CsvReader(_csv_test.class.
                 getClassLoader().
-                getResource("100Y0065.csv").getPath(), ',', Charset.forName("GBK"));
+                getResource("100Y0065.csv").getPath(), ',', Charset.forName(GBK));
         // 如果你的文件没有表头，这行不用执行
         // 这行不要是为了从表头的下一行读，也就是过滤表头
         csvReader.readHeaders();
@@ -85,7 +89,7 @@ public class _csv_test {
                     .forEachOrdered(
                             csvDataDTO -> {
                                 if (csvDataSort.get().getLastShootingLocalDateTime() == null) {
-                                    _set(csvDataSort.get(), csvDataDTO);
+                                    firstSet(csvDataSort.get(), csvDataDTO);
                                     return;
                                 }
                                 LocalDateTime lastShootingLocalDateTime = csvDataSort.get().getLastShootingLocalDateTime();
@@ -99,17 +103,33 @@ public class _csv_test {
                                     csvDataSort.set(new CsvDataSort());
                                     resultList.add(csvDataSort.get());
                                     csvDataSort.get().setSpecies(key);
-                                    _set(csvDataSort.get(), csvDataDTO);
+                                    firstSet(csvDataSort.get(), csvDataDTO);
                                 }
                             }
                     );
         }
+
+        resultList.forEach(csvDataSort ->
+                csvDataSort.getCsvDataDTOS().forEach(csvDataDTO ->
+                        csvDataDTO.setMark(csvDataSort.mark)));
         csvReader.close();
+
+        //writer
+        List<CsvDataDTO> list = new ArrayList<>();
+        for (CsvDataSort csvDataSort : resultList) {
+            list.addAll(csvDataSort.getCsvDataDTOS());
+        }
+        writer(CsvDataDTO.class, list);
     }
 
     private void _set(CsvDataSort csvDataSort, CsvDataDTO csvDataDTO) {
         csvDataSort.setLastShootingLocalDateTime(csvDataDTO.getShootingLocalDateTime());
         csvDataSort.getCsvDataDTOS().add(csvDataDTO);
+    }
+
+    private void firstSet(CsvDataSort csvDataSort, CsvDataDTO csvDataDTO) {
+        csvDataDTO.setMark(1L);
+        _set(csvDataSort, csvDataDTO);
     }
 
     private Map<String, Field> getStringFieldMap(CsvDataDTO csvDataDTO) {
@@ -127,13 +147,61 @@ public class _csv_test {
     }
 
 
+    public static void writer(Class<? extends CsvDataDTO> aClass, List<? extends CsvDataDTO> list) throws IOException {
+
+        Field[] declaredFields = aClass.getDeclaredFields();
+        List<String> headers = Arrays.stream(declaredFields).map(field -> {
+            DataMatch annotation = field.getAnnotation(DataMatch.class);
+            if (Optional.ofNullable(annotation).isPresent()) {
+                return annotation.value();
+            }
+            return "";
+        }).collect(Collectors.toList());
+
+        // 第一参数：新生成文件的路径 第二个参数：分隔符（不懂仔细查看引用百度百科的那段话） 第三个参数：字符集
+        CsvWriter csvWriter = new CsvWriter("D:/demo.csv", ',', Charset.forName(GBK));
+
+        // 写表头和内容，因为csv文件中区分没有那么明确，所以都使用同一函数，写成功就行
+        csvWriter.writeRecord(headers.toArray(new String[0]));
+
+        list.stream().map(csvDataDTO -> {
+            Field[] declaredFields1 = csvDataDTO.getClass().getDeclaredFields();
+            String[] counts = new String[declaredFields1.length];
+            for (int i = 0, declaredFields1Length = declaredFields1.length; i < declaredFields1Length; i++) {
+                Field declaredField = declaredFields1[i];
+                try {
+                    declaredField.setAccessible(true);
+                    counts[i] = Optional.ofNullable(declaredField.get(csvDataDTO)).orElse("").toString();
+                } catch (IllegalAccessException ignored) {
+                    ignored.printStackTrace();
+                }
+            }
+            return counts;
+        }).forEach(
+                counts -> {
+                    try {
+                        csvWriter.writeRecord(counts);
+                    } catch (IOException ignored) {
+                    }
+                }
+        );
+        // 关闭csvWriter
+        csvWriter.close();
+    }
+
+
     @AllArgsConstructor
-    @NoArgsConstructor
     @Setter
     @Getter
     public class CsvDataSort {
         private String species;
         private LocalDateTime lastShootingLocalDateTime;
         private final List<CsvDataDTO> csvDataDTOS = new ArrayList<>();
+        private volatile Long mark;
+
+        @Deprecated
+        protected CsvDataSort() {
+        }
     }
+
 }

@@ -34,7 +34,9 @@ public class CsvDataDTO {
     private String quantity;
     @DataMatch("备注")
     private String remark;
-
+    @DataMatch("独立拍摄")
+    private Long mark;
+    @DataMatch("校准时间点")
     private LocalDateTime shootingLocalDateTime;
 
     public void _2DateTime() {
