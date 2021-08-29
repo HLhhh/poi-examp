@@ -4,9 +4,11 @@ import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
 import com.csyl.poi.dto.CsvDataDTO;
 import com.csyl.poi.dto.DataMatch;
+import com.sun.corba.se.impl.orbutil.ObjectUtility;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.collections4.CollectionUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -14,14 +16,21 @@ import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class _csv_test {
@@ -67,6 +76,23 @@ public class _csv_test {
         }
 
         csvDataDTOList.forEach(CsvDataDTO::_2DateTime);
+        csvDataDTOList.forEach(CsvDataDTO::_copyExSpecies);
+
+        List<CsvDataDTO> bufferList = new ArrayList<>();
+        for (CsvDataDTO csvDataDTO : csvDataDTOList) {
+            if (csvDataDTO.getSpecies() == null || csvDataDTO.getSpecies().equals("")) {
+                bufferList.add(csvDataDTO);
+            } else {
+                if (CollectionUtils.isEmpty(bufferList)) {
+                    continue;
+                }
+                for (CsvDataDTO buffer : bufferList) {
+                    buffer.setSpecies(csvDataDTO.getSpecies());
+                    buffer = null;
+                }
+            }
+        }
+
         HashMap<String, List<CsvDataDTO>> collect = csvDataDTOList.stream()
                 .collect(Collectors.groupingBy(
                         CsvDataDTO::getSpecies,
@@ -112,7 +138,7 @@ public class _csv_test {
         //writer
         List<CsvDataDTO> list = new ArrayList<>();
         resultList.stream()
-//                .sorted(Comparator.comparing(CsvDataSort::getLastShootingLocalDateTime))
+                .sorted(Comparator.comparing(CsvDataSort::getLastShootingLocalDateTime))
                 .forEach(csvDataSort -> list.addAll(csvDataSort.getCsvDataDTOS()));
         writer(CsvDataDTO.class, list);
     }
@@ -124,6 +150,7 @@ public class _csv_test {
 
     private void firstSet(CsvDataSort csvDataSort, CsvDataDTO csvDataDTO) {
         csvDataDTO.setMark(1L);
+        csvDataSort.setFirstShootingLocalDateTime(csvDataDTO.getShootingLocalDateTime());
         _set(csvDataSort, csvDataDTO);
     }
 
@@ -167,8 +194,8 @@ public class _csv_test {
                 try {
                     declaredField.setAccessible(true);
                     counts[i] = Optional.ofNullable(declaredField.get(csvDataDTO)).orElse("").toString();
-                } catch (IllegalAccessException ignored) {
-                    ignored.printStackTrace();
+                } catch (IllegalAccessException exception) {
+                    exception.printStackTrace();
                 }
             }
             return counts;
@@ -190,6 +217,7 @@ public class _csv_test {
     @Getter
     public class CsvDataSort {
         private String species;
+        private LocalDateTime firstShootingLocalDateTime;
         private LocalDateTime lastShootingLocalDateTime;
         private final List<CsvDataDTO> csvDataDTOS = new ArrayList<>();
         private volatile Long mark;
