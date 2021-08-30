@@ -30,20 +30,13 @@ public class CsvDataDTO {
     private String workingDays;
     @DataMatch("物种")
     private String species;
-    @DataMatch("物种ex")
-    private String exSpecies;
     @DataMatch("数量")
     private String quantity;
     @DataMatch("备注")
     private String remark;
     @DataMatch("独立拍摄")
     private Long mark;
-    @DataMatch("校准时间点")
     private LocalDateTime shootingLocalDateTime;
-
-    public void _copyExSpecies() {
-        this.exSpecies = this.species;
-    }
 
     public void _2DateTime() {
         String[] y_m_d = this.shootingDate.split("[/]");

@@ -4,11 +4,9 @@ import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
 import com.csyl.poi.dto.CsvDataDTO;
 import com.csyl.poi.dto.DataMatch;
-import com.sun.corba.se.impl.orbutil.ObjectUtility;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.collections4.CollectionUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -16,20 +14,14 @@ import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.chrono.ChronoLocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -76,29 +68,13 @@ public class _csv_test {
         }
 
         csvDataDTOList.forEach(CsvDataDTO::_2DateTime);
-        csvDataDTOList.forEach(CsvDataDTO::_copyExSpecies);
-
-        List<CsvDataDTO> bufferList = new ArrayList<>();
-        for (CsvDataDTO csvDataDTO : csvDataDTOList) {
-            if (csvDataDTO.getSpecies() == null || csvDataDTO.getSpecies().equals("")) {
-                bufferList.add(csvDataDTO);
-            } else {
-                if (CollectionUtils.isEmpty(bufferList)) {
-                    continue;
-                }
-                for (CsvDataDTO buffer : bufferList) {
-                    buffer.setSpecies(csvDataDTO.getSpecies());
-                    buffer = null;
-                }
-            }
-        }
 
         HashMap<String, List<CsvDataDTO>> collect = csvDataDTOList.stream()
+                .filter(csvDataDTO -> csvDataDTO.getSpecies() != null && !"".equals(csvDataDTO.getSpecies()))
                 .collect(Collectors.groupingBy(
                         CsvDataDTO::getSpecies,
                         HashMap::new,
                         Collectors.toList()));
-
 
         List<CsvDataSort> resultList = new ArrayList<>();
         for (Map.Entry<String, List<CsvDataDTO>> entry : collect.entrySet()) {
@@ -140,7 +116,16 @@ public class _csv_test {
         resultList.stream()
                 .sorted(Comparator.comparing(CsvDataSort::getLastShootingLocalDateTime))
                 .forEach(csvDataSort -> list.addAll(csvDataSort.getCsvDataDTOS()));
-        writer(CsvDataDTO.class, list);
+        Map<String, CsvDataDTO> hasMarkMap = list.stream()
+                .filter(csvDataDTO -> csvDataDTO.getMark() != null)
+                .collect(Collectors.toMap(CsvDataDTO::getPhotoCode, Function.identity()));
+        csvDataDTOList.forEach(csvDataDTO -> {
+            csvDataDTO.setShootingLocalDateTime(null);
+            if (Optional.ofNullable(hasMarkMap.get(csvDataDTO.getPhotoCode())).isPresent()) {
+                csvDataDTO.setMark(1L);
+            }
+        });
+        writer(CsvDataDTO.class, csvDataDTOList);
     }
 
     private void _set(CsvDataSort csvDataSort, CsvDataDTO csvDataDTO) {
@@ -181,7 +166,7 @@ public class _csv_test {
         }).collect(Collectors.toList());
 
         // 第一参数：新生成文件的路径 第二个参数：分隔符（不懂仔细查看引用百度百科的那段话） 第三个参数：字符集
-        CsvWriter csvWriter = new CsvWriter("D:/100Y0065_processed.csv", ',', Charset.forName(GBK));
+        CsvWriter csvWriter = new CsvWriter("D:/processed.csv", ',', Charset.forName(GBK));
 
         // 写表头和内容，因为csv文件中区分没有那么明确，所以都使用同一函数，写成功就行
         csvWriter.writeRecord(headers.toArray(new String[0]));
