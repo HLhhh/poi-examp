@@ -39,8 +39,6 @@ public class Csv {
         csvReader.readHeaders();
         String[] headers = csvReader.getHeaders();
         Arrays.stream(headers).map(a -> a + ":").forEach(System.out::print);
-        System.out.println();
-
 
         // 读取每行的内容
         List<CsvDataDTO> csvDataDTOList = new ArrayList<>();
