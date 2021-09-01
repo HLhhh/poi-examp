@@ -1,5 +1,6 @@
 package com.csyl.poi.excel.dto;
 
+import com.csyl.poi.excel.constant.BusinessConstant;
 import com.csyl.poi.excel.constant.StringConstant;
 import com.csyl.poi.excel.util.DateUtil;
 import lombok.Data;
@@ -48,7 +49,7 @@ public class CsvDataDTO {
                 .map(this::additionalZero)
                 .collect(Collectors.toCollection(ArrayList::new));
         if (HMSList.size() == DONT_HAS_SECOND) {
-            HMSList.add(ZERO_STR + ZERO_STR);
+            HMSList.add(BusinessConstant.DOUlE_ZERO_STR);
         }
         this.shootingLocalDateTime = DateUtil.str2Date(Arrays.stream(this.shootingDate.split(SLASH))
                 .map(this::additionalZero)

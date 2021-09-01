@@ -2,12 +2,15 @@ package com.csyl.poi.excel;
 
 import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
+import com.csyl.poi.excel.constant.BusinessConstant;
 import com.csyl.poi.excel.dto.CsvDataDTO;
 import com.csyl.poi.excel.dto.DataMatch;
+import com.csyl.poi.excel.util.FileUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
@@ -20,60 +23,48 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@AllArgsConstructor
 public class Csv {
 
-    private final static String GBK = "GBK";
-    public String url;
+    /**
+     * @param itemFile
+     * @throws IOException
+     */
+    public void read(File itemFile) throws IOException {
 
-    public void read(String path) throws IOException {
-        // 第一参数：读取文件的路径 第二个参数：分隔符（不懂仔细查看引用百度百科的那段话） 第三个参数：字符集
-        CsvReader csvReader = new CsvReader(path, ',', Charset.forName(GBK));
-        // 如果你的文件没有表头，这行不用执行
-        // 这行不要是为了从表头的下一行读，也就是过滤表头
+        CsvReader csvReader = new CsvReader(itemFile.getPath(), BusinessConstant.COMMA, Charset.forName(BusinessConstant.GBK));
         csvReader.readHeaders();
         String[] headers = csvReader.getHeaders();
-        Arrays.stream(headers).map(a -> a + ":").forEach(System.out::print);
 
-        // 读取每行的内容
-        List<CsvDataDTO> csvDataDTOList = new ArrayList<>();
-        while (csvReader.readRecord()) {
-            CsvDataDTO csvDataDTO = new CsvDataDTO();
-            Map<String, Field> map = getStringFieldMap(csvDataDTO);
+        List<CsvDataDTO> csvDataDTOList = this.getCsvDataDTOS(csvReader, headers);
+        csvReader.close();
 
-            String collect = Arrays.stream(headers).map(name -> {
-                try {
-                    String value = csvReader.get(name);
-                    if (map.get(name) != null) {
-                        map.get(name).setAccessible(true);
-                        map.get(name).set(csvDataDTO, value);
-                    }
-                    return value;
-                } catch (IOException | IllegalAccessException e) {
-                    e.printStackTrace();
-                }
-                return "Null";
-            }).collect(Collectors.joining(":"));
-            csvDataDTOList.add(csvDataDTO);
-            System.out.println(collect);
-        }
+        List<CsvDataDTO> list = new ArrayList<>();
+        this.performClassification(csvDataDTOList).forEach(csvDataSort -> list.addAll(csvDataSort.getCsvDataDTOS()));
+        Map<String, CsvDataDTO> hasMarkMap = list.stream()
+                .filter(csvDataDTO -> csvDataDTO.getMark() != null)
+                .collect(Collectors.toMap(CsvDataDTO::getPhotoCode, Function.identity()));
+        csvDataDTOList.forEach(csvDataDTO -> {
+            csvDataDTO.setShootingLocalDateTime(null);
+            if (Optional.ofNullable(hasMarkMap.get(csvDataDTO.getPhotoCode())).isPresent()) {
+                csvDataDTO.setMark(1L);
+            }
+        });
 
-        csvDataDTOList.forEach(CsvDataDTO::addShootingLocalDateTime);
+        writer(CsvDataDTO.class, csvDataDTOList, itemFile);
+    }
 
-        HashMap<String, List<CsvDataDTO>> collect = csvDataDTOList.stream()
+    private List<CsvDataSort> performClassification(List<CsvDataDTO> csvDataDTOList) {
+        Map<String, List<CsvDataDTO>> speciesGroupList = csvDataDTOList.stream()
                 .filter(csvDataDTO -> csvDataDTO.getSpecies() != null && !"".equals(csvDataDTO.getSpecies()))
-                .collect(Collectors.groupingBy(
-                        CsvDataDTO::getSpecies,
-                        HashMap::new,
-                        Collectors.toList()));
+                .collect(Collectors.groupingBy(CsvDataDTO::getSpecies));
 
         List<CsvDataSort> resultList = new ArrayList<>();
-        for (Map.Entry<String, List<CsvDataDTO>> entry : collect.entrySet()) {
+        for (Map.Entry<String, List<CsvDataDTO>> entry : speciesGroupList.entrySet()) {
             //物种
             String key = entry.getKey();
             AtomicReference<CsvDataSort> csvDataSort = new AtomicReference<>(new CsvDataSort());
@@ -94,8 +85,8 @@ public class Csv {
 
                                 Duration duration = Duration.between(lastShootingLocalDateTime, shootingLocalDateTime);
                                 long l = Math.abs(duration.toMinutes());
-                                if (l <= 30) {
-                                    _set(csvDataSort.get(), csvDataDTO);
+                                if (l <= BusinessConstant.INTERVALS) {
+                                    set(csvDataSort.get(), csvDataDTO);
                                 } else {
                                     csvDataSort.set(new CsvDataSort());
                                     resultList.add(csvDataSort.get());
@@ -105,26 +96,33 @@ public class Csv {
                             }
                     );
         }
-        csvReader.close();
-
-        //writer
-        List<CsvDataDTO> list = new ArrayList<>();
-        resultList.stream()
-                .sorted(Comparator.comparing(CsvDataSort::getLastShootingLocalDateTime))
-                .forEach(csvDataSort -> list.addAll(csvDataSort.getCsvDataDTOS()));
-        Map<String, CsvDataDTO> hasMarkMap = list.stream()
-                .filter(csvDataDTO -> csvDataDTO.getMark() != null)
-                .collect(Collectors.toMap(CsvDataDTO::getPhotoCode, Function.identity()));
-        csvDataDTOList.forEach(csvDataDTO -> {
-            csvDataDTO.setShootingLocalDateTime(null);
-            if (Optional.ofNullable(hasMarkMap.get(csvDataDTO.getPhotoCode())).isPresent()) {
-                csvDataDTO.setMark(1L);
-            }
-        });
-        writer(CsvDataDTO.class, csvDataDTOList);
+        return resultList;
     }
 
-    private void _set(CsvDataSort csvDataSort, CsvDataDTO csvDataDTO) {
+    private List<CsvDataDTO> getCsvDataDTOS(CsvReader csvReader, String[] headers) throws IOException {
+        List<CsvDataDTO> resultList = new ArrayList<>();
+        while (csvReader.readRecord()) {
+            CsvDataDTO csvDataDTO = new CsvDataDTO();
+            Map<String, Field> map = this.extractHeader(csvDataDTO.getClass());
+
+            Arrays.stream(headers).forEach(name -> {
+                try {
+                    String value = csvReader.get(name);
+                    if (map.get(name) != null) {
+                        map.get(name).setAccessible(true);
+                        map.get(name).set(csvDataDTO, value);
+                    }
+                } catch (Exception ignored) {
+                    ignored.printStackTrace();
+                }
+            });
+            resultList.add(csvDataDTO);
+        }
+        resultList.forEach(CsvDataDTO::addShootingLocalDateTime);
+        return resultList;
+    }
+
+    private void set(CsvDataSort csvDataSort, CsvDataDTO csvDataDTO) {
         csvDataSort.setLastShootingLocalDateTime(csvDataDTO.getShootingLocalDateTime());
         csvDataSort.getCsvDataDTOS().add(csvDataDTO);
     }
@@ -132,11 +130,10 @@ public class Csv {
     private void firstSet(CsvDataSort csvDataSort, CsvDataDTO csvDataDTO) {
         csvDataDTO.setMark(1L);
         csvDataSort.setFirstShootingLocalDateTime(csvDataDTO.getShootingLocalDateTime());
-        _set(csvDataSort, csvDataDTO);
+        set(csvDataSort, csvDataDTO);
     }
 
-    private Map<String, Field> getStringFieldMap(CsvDataDTO csvDataDTO) {
-        Class<? extends CsvDataDTO> aClass = csvDataDTO.getClass();
+    private Map<String, Field> extractHeader(Class<? extends CsvDataDTO> aClass) {
         Field[] declaredFields = aClass.getDeclaredFields();
         Map<String, Field> map = new HashMap<>();
         for (Field field : declaredFields) {
@@ -152,21 +149,19 @@ public class Csv {
     }
 
 
-    public static void writer(Class<? extends CsvDataDTO> aClass, List<? extends CsvDataDTO> list) throws IOException {
+    public void writer(Class<? extends CsvDataDTO> aClass, List<? extends CsvDataDTO> list, File itemFile) throws IOException {
 
-        Field[] declaredFields = aClass.getDeclaredFields();
-        List<String> headers = Arrays.stream(declaredFields).map(field -> {
-            DataMatch annotation = field.getAnnotation(DataMatch.class);
-            if (Optional.ofNullable(annotation).isPresent()) {
-                return annotation.value();
-            }
-            return "";
-        }).collect(Collectors.toList());
+        Set<String> headers = extractHeader(aClass).keySet();
+        String processUrl = FileUtil.interceptUrl(itemFile.getPath(), BusinessConstant.SLASH2) + BusinessConstant.SLASH2 + BusinessConstant.PROCESS;
 
-        // 第一参数：新生成文件的路径 第二个参数：分隔符（不懂仔细查看引用百度百科的那段话） 第三个参数：字符集
-        CsvWriter csvWriter = new CsvWriter("D:\\test\\csv\\" + UUID.randomUUID().toString() + ".csv", ',', Charset.forName(GBK));
+        File fileDir = new File(processUrl);
+        if (!fileDir.exists()) {
+            fileDir.mkdirs();
+        }
+        CsvWriter csvWriter = new CsvWriter(fileDir.getPath() + BusinessConstant.SLASH + FileUtil.interceptUrl(itemFile.getName(), BusinessConstant.DOT) + BusinessConstant.PROCESS + BusinessConstant.CSV,
+                BusinessConstant.COMMA,
+                Charset.forName(BusinessConstant.GBK));
 
-        // 写表头和内容，因为csv文件中区分没有那么明确，所以都使用同一函数，写成功就行
         csvWriter.writeRecord(headers.toArray(new String[0]));
 
         list.stream().map(csvDataDTO -> {
