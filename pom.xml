@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.csyl</groupId>
     <artifactId>poi-examp</artifactId>
-    <version>0.0.1-bata</version>
+    <version>0.0.2-bata</version>
     <name>poi-examp</name>
 
     <properties>
