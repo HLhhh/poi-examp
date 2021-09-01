@@ -2,12 +2,11 @@ package com.csyl.poi.excel;
 
 import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
-import com.csyl.poi.dto.CsvDataDTO;
-import com.csyl.poi.dto.DataMatch;
+import com.csyl.poi.excel.dto.CsvDataDTO;
+import com.csyl.poi.excel.dto.DataMatch;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -21,21 +20,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class _csv_test {
+@AllArgsConstructor
+public class Csv {
 
     private final static String GBK = "GBK";
+    public String url;
 
-    @Test
-    public void read() throws IOException {
-
+    public void read(String path) throws IOException {
         // 第一参数：读取文件的路径 第二个参数：分隔符（不懂仔细查看引用百度百科的那段话） 第三个参数：字符集
-        CsvReader csvReader = new CsvReader(_csv_test.class.
-                getClassLoader().
-                getResource("100Y0065.csv").getPath(), ',', Charset.forName(GBK));
+        CsvReader csvReader = new CsvReader(path, ',', Charset.forName(GBK));
         // 如果你的文件没有表头，这行不用执行
         // 这行不要是为了从表头的下一行读，也就是过滤表头
         csvReader.readHeaders();
@@ -96,7 +94,7 @@ public class _csv_test {
                                 LocalDateTime lastShootingLocalDateTime = csvDataSort.get().getLastShootingLocalDateTime();
                                 LocalDateTime shootingLocalDateTime = csvDataDTO.getShootingLocalDateTime();
 
-                                Duration duration = java.time.Duration.between(lastShootingLocalDateTime, shootingLocalDateTime);
+                                Duration duration = Duration.between(lastShootingLocalDateTime, shootingLocalDateTime);
                                 long l = Math.abs(duration.toMinutes());
                                 if (l <= 30) {
                                     _set(csvDataSort.get(), csvDataDTO);
@@ -145,7 +143,9 @@ public class _csv_test {
         Map<String, Field> map = new HashMap<>();
         for (Field field : declaredFields) {
             DataMatch annotation = field.getAnnotation(DataMatch.class);
-            if (annotation == null) continue;
+            if (annotation == null) {
+                continue;
+            }
 
             String value = annotation.value();
             map.put(value, field);
@@ -166,7 +166,7 @@ public class _csv_test {
         }).collect(Collectors.toList());
 
         // 第一参数：新生成文件的路径 第二个参数：分隔符（不懂仔细查看引用百度百科的那段话） 第三个参数：字符集
-        CsvWriter csvWriter = new CsvWriter("D:/processed.csv", ',', Charset.forName(GBK));
+        CsvWriter csvWriter = new CsvWriter("D:\\test\\csv\\" + UUID.randomUUID().toString() + ".csv", ',', Charset.forName(GBK));
 
         // 写表头和内容，因为csv文件中区分没有那么明确，所以都使用同一函数，写成功就行
         csvWriter.writeRecord(headers.toArray(new String[0]));
