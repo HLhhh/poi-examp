@@ -22,5 +22,5 @@ public class BusinessConstant {
 
     public static final String CSV = ".csv";
     public final static String GBK = "GBK";
-    public final static String PROCESS = "process";
+    public final static String PROCESS = "processed";
 }

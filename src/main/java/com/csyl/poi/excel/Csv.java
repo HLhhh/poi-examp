@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,9 +35,9 @@ public class Csv {
      * @param itemFile
      * @throws IOException
      */
-    public void read(File itemFile) throws IOException {
+    public void read(File itemFile) throws Exception {
 
-        CsvReader csvReader = new CsvReader(itemFile.getPath(), BusinessConstant.COMMA, Charset.forName(BusinessConstant.GBK));
+        CsvReader csvReader = new CsvReader(itemFile.getPath(), BusinessConstant.COMMA, Charset.forName(FileUtil.codeString(itemFile)));
         csvReader.readHeaders();
         String[] headers = csvReader.getHeaders();
 
@@ -136,7 +136,7 @@ public class Csv {
 
     private Map<String, Field> extractHeader(Class<? extends CsvDataDTO> aClass) {
         Field[] declaredFields = aClass.getDeclaredFields();
-        Map<String, Field> map = new HashMap<>();
+        LinkedHashMap<String, Field> map = new LinkedHashMap<>();
         for (Field field : declaredFields) {
             DataMatch annotation = field.getAnnotation(DataMatch.class);
             if (annotation == null) {
@@ -152,7 +152,6 @@ public class Csv {
 
     public void writer(Class<? extends CsvDataDTO> aClass, List<? extends CsvDataDTO> list, File itemFile) throws IOException {
 
-        Set<String> headers = extractHeader(aClass).keySet();
         String processUrl = FileUtil.interceptUrl(itemFile.getPath(), BusinessConstant.SLASH2) + BusinessConstant.SLASH2 + BusinessConstant.PROCESS;
 
         File fileDir = new File(processUrl);
@@ -163,6 +162,7 @@ public class Csv {
                 BusinessConstant.COMMA,
                 Charset.forName(BusinessConstant.GBK));
 
+        Set<String> headers = extractHeader(aClass).keySet();
         csvWriter.writeRecord(headers.toArray(new String[0]));
 
         list.stream().map(csvDataDTO -> {
