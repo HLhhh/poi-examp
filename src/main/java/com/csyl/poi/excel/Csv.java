@@ -8,6 +8,7 @@ import com.csyl.poi.excel.dto.DataMatch;
 import com.csyl.poi.excel.util.FileUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.File;
@@ -191,6 +192,7 @@ public class Csv {
 
 
     @AllArgsConstructor
+    @NoArgsConstructor
     @Setter
     @Getter
     public class CsvDataSort {
@@ -199,10 +201,6 @@ public class Csv {
         private LocalDateTime lastShootingLocalDateTime;
         private final List<CsvDataDTO> csvDataDTOS = new ArrayList<>();
         private volatile Long mark;
-
-        @Deprecated
-        protected CsvDataSort() {
-        }
     }
 
 }
