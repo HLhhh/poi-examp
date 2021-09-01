@@ -65,7 +65,7 @@ public class Csv {
             System.out.println(collect);
         }
 
-        csvDataDTOList.forEach(CsvDataDTO::_2DateTime);
+        csvDataDTOList.forEach(CsvDataDTO::addShootingLocalDateTime);
 
         HashMap<String, List<CsvDataDTO>> collect = csvDataDTOList.stream()
                 .filter(csvDataDTO -> csvDataDTO.getSpecies() != null && !"".equals(csvDataDTO.getSpecies()))

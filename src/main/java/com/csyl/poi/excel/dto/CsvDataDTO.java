@@ -9,6 +9,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+import static com.csyl.poi.excel.constant.BusinessConstant.COLON;
+import static com.csyl.poi.excel.constant.BusinessConstant.DONT_HAS_SECOND;
+import static com.csyl.poi.excel.constant.BusinessConstant.SLASH;
+import static com.csyl.poi.excel.constant.BusinessConstant.ZERO_STR;
+
 @Data
 public class CsvDataDTO {
 
@@ -38,25 +43,19 @@ public class CsvDataDTO {
     private Long mark;
     private LocalDateTime shootingLocalDateTime;
 
-    public void _2DateTime() {
-        String[] y_m_d = this.shootingDate.split("[/]");
-        String y_m_d_str = Arrays.stream(y_m_d)
-                .map(this::getString).collect(Collectors.joining("/"));
-        String[] h_m_s = this.shootingTime.split("[:]");
-        ArrayList<String> arrayList = Arrays.stream(h_m_s)
-                .map(this::getString)
+    public void addShootingLocalDateTime() {
+        ArrayList<String> HMSList = Arrays.stream(this.shootingTime.split(COLON))
+                .map(this::additionalZero)
                 .collect(Collectors.toCollection(ArrayList::new));
-        if (arrayList.size() == 2) {
-            arrayList.add("00");
+        if (HMSList.size() == DONT_HAS_SECOND) {
+            HMSList.add(ZERO_STR + ZERO_STR);
         }
-        String h_m_s_str = String.join(":", arrayList);
-        this.shootingLocalDateTime = DateUtil.str2Date(y_m_d_str + StringConstant.SPACE + h_m_s_str);
+        this.shootingLocalDateTime = DateUtil.str2Date(Arrays.stream(this.shootingDate.split(SLASH))
+                .map(this::additionalZero)
+                .collect(Collectors.joining(SLASH)) + StringConstant.SPACE + String.join(COLON, HMSList));
     }
 
-    private String getString(String s) {
-        if (s.length() == 1) {
-            return "0" + s;
-        }
-        return s;
+    private String additionalZero(String dateStr) {
+        return dateStr.length() == 1 ? ZERO_STR + dateStr : dateStr;
     }
 }
