@@ -57,6 +57,7 @@ public class CsvDataDTO {
     }
 
     private String additionalZero(String dateStr) {
+        dateStr = dateStr.replaceAll(" 星期[一|二|三|四|五|六|日]", "");
         return dateStr.length() == 1 ? ZERO_STR + dateStr : dateStr;
     }
 }

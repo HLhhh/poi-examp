@@ -13,6 +13,7 @@ public class BusinessConstant {
 
     public static final String DOT = ".";
     public static final char COMMA = ',';
+    public final static String SPACE = " ";
 
 
     public static final String ZERO_STR = "0";
